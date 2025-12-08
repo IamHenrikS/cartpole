@@ -14,8 +14,12 @@ from plotter.LivePlotter import LivePlotter
 env = CartPoleDynamics()
 renderer = PygameRenderer(env)
 controller = PIDcontroller()
-plotter = LivePlotter("CartPole: Tip & Angle")
+
 plotting = "no"
+plotter = None
+
+if plotting == "yes":
+    plotter = LivePlotter("CartPole: Tip & Angle")
 
 while True:
     for event in pygame.event.get():
