@@ -21,9 +21,16 @@ class CartPoleDynamics:
         self.reset()
 
     def reset(self):
+        """
+        Docstring for reset
+        
+        :param self: self.theta is the angle of the
+        pole when it is hanging down vertically. The upright position 
+        would thus be pi (180 deg)
+        """
         self.x = 0.0
         self.x_dot = 0.0
-        self.theta = 0.05
+        self.theta = np.deg2rad(175)
         self.theta_dot = 0.0
     
     @property

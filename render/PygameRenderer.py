@@ -46,9 +46,12 @@ class PygameRenderer:
         pole_length_px = int(self.env.l * 2 * self.pixels_per_meter)
         theta = self.env.theta
         pole_x = cart_x + int(pole_length_px * np.sin(theta))
-        pole_y = cart_y - int(pole_length_px * np.cos(theta))
+        pole_y = cart_y + int(pole_length_px * np.cos(theta))
         pygame.draw.line(screen, (255,0,0), (cart_x, cart_y), (pole_x, pole_y), 6)
 
+        # Draw the ball ontop of the pole
+        ball_radius = 10 #pixels
+        pygame.draw.circle(screen, (255,0,0), (pole_x, pole_y), ball_radius)
         pygame.display.flip()
 
     # --- Framerate control method ---
