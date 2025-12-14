@@ -1,5 +1,10 @@
 """
 The equations of motion of the cartpole.
+Based on the followning derivation of the dynamics:
+Source 1: Cart-Pole Optimal Control
+https://openmdao.github.io/dymos/examples/cart_pole/cart_pole.html
+Source 2: Cart-Pole System: Equations of motion.
+https://courses.ece.ucsb.edu/ECE594/594D_W10Byl/hw/cartpole_eom.pdf 
 """
 import numpy as np
 
@@ -40,33 +45,44 @@ class CartPoleDynamics:
     
     def step(self, force):
         g = self.g
-        m_total = self.m_total
-        m_cart = self.m_cart
-        m_pole = self.m_pole
+        m_p = self.m_pole
+        m_t = self.m_total
         l = self.l
         d_theta = self.d_theta
         b_x = self.b_x
-        
-        x, x_dot, theta, theta_dot = self.x, self.x_dot, self.theta, self.theta_dot
-        
-        costh = np.cos(theta)
-        sinth = np.sin(theta)
+        dt = self.dt
 
-        temp = (force + m_pole * l * theta_dot**2 * sinth) / m_total
-        
-        theta_acc = (g * sinth - costh * temp - d_theta * theta_dot) / (
-            l * (4/3 - (m_pole * costh**2) / m_total)
+        x, x_dot, theta, theta_dot = self.x, self.x_dot, self.theta, self.theta_dot
+
+        sin_t = np.sin(theta)
+        cos_t = np.cos(theta)
+
+        # Angular acceleration (explicit form)
+        theta_acc = (
+            g * sin_t
+            - cos_t * (force + m_p * l * theta_dot**2 * sin_t) / m_t
+            - d_theta * theta_dot
+        ) / (
+            l * (4.0 / 3.0 - (m_p * cos_t**2) / m_t)
         )
-        
-        x_acc = temp - (m_pole * l * theta_acc * costh) / (m_total - b_x * x_dot)
+
+        # Horizontal acceleration (explicit form)
+        x_acc = (
+            (force + m_p * l * theta_dot**2 * sin_t) / m_t
+            - (m_p * l * theta_acc * cos_t) / (m_t - b_x * x_dot)
+        )
 
         # Integrate
-        x += self.dt * x_dot
-        x_dot += self.dt * x_acc
-        theta += self.dt * theta_dot
-        theta_dot += self.dt * theta_acc
+        x += dt * x_dot
+        x_dot += dt * x_acc
+        theta += dt * theta_dot
+        theta_dot += dt * theta_acc
 
-        self.x, self.x_dot, self.theta, self.theta_dot = x, x_dot, theta, theta_dot
+        self.x = x
+        self.x_dot = x_dot
+        self.theta = theta
+        self.theta_dot = theta_dot
+
 
     def poleposition(self):
         """
