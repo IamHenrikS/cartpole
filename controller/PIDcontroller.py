@@ -1,24 +1,55 @@
+"""
+Description: The current PID controller is a PD-controller.
+It is possible to implement a I-part for the cart as the cart 
+will be the only part of the system where the drift and intergrator is 
+suitable.
+"""
+
 import numpy as np
 
 class PIDcontroller:
-    def __init__(self, Kp=2, Kp_cart=0.05, Ki=0, Ki_cart=0.0, Kd=0.1, Kd_cart=0.2):
-        # Angle PID
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
-
-        # Cart PID
-        self.Kp_cart = Kp_cart
-        self.Ki_cart = Ki_cart
-        self.Kd_cart = Kd_cart
-
-        # References
-        self.theta_ref = np.pi
+    def __init__(self, env):
+        """
+        Implements the env and initializes the PID controller. 
+        """
+        self.theta_ref = 0.0
         self.x_ref = 0.0
-
-        # Integrators
         self.integral_theta = 0.0
         self.integral_x = 0.0
+        
+        # Parameters from (env, dynamics)
+        g = env.g
+        m_pole = env.m_p
+        m_total = env.m_t
+        l = env.l
+        d_theta = env.mu_p
+        b_x = env.mu_c
+        dt = env.dt
+
+        alpha = 4.0/3.0 - m_pole/m_total
+        self.A = np.array([[0, 1, 0, 0],
+                           [0, -b_x/m_total, -m_pole*g/(m_total*alpha), -m_pole*d_theta/(m_total*alpha)],
+                           [0, 0, 0, 1],
+                           [0, 0, -g/(l*alpha), -d_theta/(l*alpha)]])
+        self.B = np.array([
+                            [0],
+                            [(1/m_total) + (m_pole / (m_total**2 * alpha))],
+                            [0],
+                            [-(1/(m_total * l * alpha))]
+                            ])
+        # PID gains
+        self.Kp = 50
+        self.Kd = 0.0
+        self.Kp_cart = 0.5
+        self.Kd_cart = 1
+        self.Ki = 0.0
+        self.Ki_cart = 0.0
+
+        # PD - Closed loop solution
+        K_pid = np.array([[self.Kp_cart, self.Kd_cart, self.Kp, self.Kd]])
+        A_cl = self.A - self.B @ K_pid
+        poles = np.linalg.eigvals(A_cl)
+        print("Closed-loop poles:", poles)
 
     def get_force(self, state, dt):
         x, x_dot, theta, theta_dot = state
@@ -44,4 +75,4 @@ class PIDcontroller:
             + self.Kd_cart * x_dot
         )
 
-        return F
+        return -F
