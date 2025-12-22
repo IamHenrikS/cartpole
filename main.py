@@ -32,6 +32,7 @@ import numpy as np
 from dynamics.cartpole_dynamics import CartPoleDynamics
 from controller.PIDcontroller import PIDcontroller
 from controller.LQRcontroller import LQRcontroller
+from controller.nonlinearLQRcontroller import nonlinearLQRcontroller
 
 ##### CONFIG #####
 MODE = "online"    # "online" or "offline"
@@ -42,9 +43,10 @@ FPS = 50           # Framerate for online mode
 env = CartPoleDynamics()
 
 ##### Selection of Controller #####
-controller = PIDcontroller(env)    # PD-controller
-#controller = LQRcontroller(env)    # LQR-controller
-#controller = None                   # Placeholder
+#controller = PIDcontroller(env)            # PD-controller
+#controller = LQRcontroller(env)            # LQR-controller
+controller = nonlinearLQRcontroller(env)    # LQR-controller
+#controller = None                          # Placeholder
 
 ##### MAIN PROGRAM #####
 if MODE == "online":

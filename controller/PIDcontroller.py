@@ -3,6 +3,10 @@ Description: The current PID controller is a PD-controller.
 It is possible to implement a I-part for the cart as the cart 
 will be the only part of the system where the drift and intergrator is 
 suitable.
+
+Sources for improvement:
+1. https://www.youtube.com/watch?v=hRnofMxEf3Q
+
 """
 
 import numpy as np
