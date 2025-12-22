@@ -10,7 +10,7 @@ non-linear development. The following is tested:
 
 # The code is runned by the following command:
 pytest --collect-only: Verifies if the tests are gathered properly.
-
+pytest -v tests/tests_dynamics.py: Runs the pytest
 pytest -v tests.py
 """
 
