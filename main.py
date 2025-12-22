@@ -1,23 +1,25 @@
 """
-Main file to be used as the python run file. 
 The main utilizes the following files:
 
 Controller: Can be switched with different controllers.
 - PIDcontroller: 
 - LQRcontroller:
+- Non Linear LQR
 - ML
+
 Dynamics
 - cartpole_dynamics(): Dynamics of the cart and the pole.
+
 plotter
 - LivePlotter(): Is plotting the errors in real-time. Used for showcasing with pygame.
 - OfflinePlotter(): Quicker simulations with focus on analytics of the system.
+
 render:
 - PygameRenderer(): Enables pygame and visual addition.
 
 The file operates in two options: offline and online.
 The online activates the PygameRenderer() and LivePlotter whilst
-offline deactivates those and instead uses OfflinePlotter
-whilst storing the values of each run.
+offline instead uses OfflinePlotter whilst storing the values of each run.
 
 Mode:
 - offline: Needs to set a simulation time SIM_TIME
@@ -25,52 +27,52 @@ Mode:
 """
 import sys
 import pygame
+import numpy as np
 
 from dynamics.cartpole_dynamics import CartPoleDynamics
 from controller.PIDcontroller import PIDcontroller
+from controller.LQRcontroller import LQRcontroller
 
-MODE = "offline"    # "online" or "offline"
+##### CONFIG #####
+MODE = "online"    # "online" or "offline"
 SIM_TIME = 10.0    # seconds
+FPS = 50           # Framerate for online mode
 
+##### Initialization of the environment #####
 env = CartPoleDynamics()
-controller = PIDcontroller()
 
-# ============================
-# ONLINE MODE
-# ============================
+##### Selection of Controller #####
+controller = PIDcontroller(env)    # PD-controller
+#controller = LQRcontroller(env)    # LQR-controller
+#controller = None                   # Placeholder
+
+##### MAIN PROGRAM #####
 if MODE == "online":
     from render.PygameRenderer import PygameRenderer
     from plotter.LivePlotter import LivePlotter
-
+    
+    # Activates the renderer with environment
     renderer = PygameRenderer(env)
 
-    plotter = LivePlotter(
-        theta_ref=controller.theta_ref,
-        x_ref=controller.x_ref,
-        title="CartPole Tracking Errors"
-    )
-
+    # Main whil loop for pygame
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-        force = controller.get_force(env.state, env.dt)
+        force = 0 if controller is None else controller.get_force(env.state, env.dt)
         env.step(force)
-
-        # Calling LivePlotter() with state variables.
-        plotter.update(env.state)
-
-        # Rendition to pygame
+        
         renderer.render()
         renderer.tick(50)
+        #plotter.update(env.state) # Optional
 
-# ============================
-# OFFLINE MODE
-# ============================
 elif MODE == "offline":
     from plotter.OfflinePlotter import OfflinePlotter
+
+    if controller is None:
+        raise ValueError("Offline mode requires a controller to be initialized.")
 
     plotter = OfflinePlotter(
         theta_ref=controller.theta_ref,
@@ -81,16 +83,11 @@ elif MODE == "offline":
     dt = env.dt
 
     while t < SIM_TIME:
-        # Iniate the controller get-func()
         force = controller.get_force(env.state, dt)
         env.step(force)
-
         plotter.log(env.state, t)
         t += dt
 
     plotter.plot()
-
-    # Post-processing plots
-    #plotter.plot_time_response()
-    #plotter.plot_poles_zeros(env)
-    #plotter.plot_nyquist(env)
+else:
+    raise ValueError("The mode has to be decided 'online' or 'offline'.")
