@@ -48,7 +48,7 @@ class CartPoleDynamics:
         Theta = 0: Upright, Theta < 0: Pole leaning left, Theta > 0: Pole leaning right.
         """
         self.x = 0
-        self.x_dot = -1.0
+        self.x_dot = 0.0
         self.theta = np.deg2rad(10)
         self.theta_dot = np.deg2rad(0.0)
     
