@@ -5,6 +5,9 @@ for linearization
 The LQR source 1:
 https://blog.sackarias.se/controlling-the-cart-pole-using-lqr
 
+Source 2: Good youtube video of the solution
+https://www.youtube.com/watch?v=hAI8Ag3bzeE
+
 # Thoughts for improvement:
 1. Increase the damping of the system for theta, theta_dot in order to
 damp the arm motion for 
@@ -18,7 +21,7 @@ class LQRcontroller:
     def __init__(self, env):
         # init conditions (references)
         self.theta_ref = 0.0
-        self.x_ref = 0.1
+        self.x_ref = 0.0
         
         # physical units
         g = env.g
@@ -47,13 +50,16 @@ class LQRcontroller:
                             ])
 
         # Defining the solution of the penalizes.
-        self.Q = np.diag([10, 10, 10e6, 10])
+        self.Q = np.diag([0.0, 0, 3e3, 300])
         self.R = np.array([[0.1]])
 
-        # The system is remodeled from continous to discrete 
-        Ad, Bd, _, _, _ = cont2discrete((self.A, self.B, np.eye(4), np.zeros((4,1))), dt)
+        # The system is remodeled from continous to discrete
+        Ad, Bd, Cd, Dd, dtd = cont2discrete((self.A, self.B, np.eye(4), np.zeros((4,1))), dt)
         self.Ad = Ad
         self.Bd = Bd
+        self.Cd = Cd
+        self.Dd = Dd
+        self.dtd = dtd
 
         # The Riccati is solved using DARE
         Pd = solve_discrete_are(self.Ad, self.Bd, self.Q, self.R)
@@ -64,29 +70,45 @@ class LQRcontroller:
         poles_d = np.linalg.eigvals(A_cl_d)
         print("Discrete-time closed-loop poles:", poles_d)
 
-        # Compute feedforward for theta reference
-        C = np.array([[1, 0, 0, 0], # tracking x
-                      [0, 0, 1, 0]] # tracking theta
-                      )
-        D = np.zeros((2,1))
-
-        # Solve CARE in order for the Kr
-        S = solve_continuous_are(self.A, self.B, self.Q, self.R)
-        self.K = np.linalg.inv(self.R) @ self.B.T @ S
-        self.K_r = np.linalg.pinv(D + C @ np.linalg.inv(-self.A + self.B @ self.K) @ self.B)
-        print(self.K_r)
-
     def get_force(self, state, dt=None):
         """
-        Description:
+        Description: Returns the force as we know
+        u = -Kd*state[0] (where u = Force [N])
+        
+        :params:
 
-
+        :state:
         """
         x, x_dot, theta, theta_dot = state
-        x_lin = np.array([x - self.x_ref, x_dot, theta - self.theta_ref, theta_dot])
 
-        # u = -K(x-x_ref)+K_r*r (feedforward term)
-        # 
-        r = np.array([self.x_ref, self.theta_ref])  # reference
-        force = - self.Kd @ x_lin + self.K_r @ r
+        #kx ≈ 0.3 – 0.8
+        #kd ≈ 0.1 – 0.4
+        # This was the final solution we reduce the solution to not care about the system
+        # regading x in the LQR and solely handles it with the outside loop with adjusted values
+        # This stabilized the solution at the expected place. Vinst
+        kx=0.3
+        kd=0.25
+        if abs(theta) < np.deg2rad(1):
+            theta_ref = kx * (self.x_ref - x) - kd * x_dot
+        else:
+            theta_ref = 0.0
+
+        # --- Inner loop (fast LQR) ---
+        x_lin = np.array([
+            x,                # do NOT over-penalize x
+            x_dot,
+            theta - theta_ref,
+            theta_dot
+        ])
+
+        force = -self.Kd @ x_lin
+
+        """
+        x_lin = np.array([x - self.x_ref, 
+                          x_dot, 
+                          theta - self.theta_ref, 
+                          theta_dot]) 
+        
+        force = - self.Kd @ x_lin
+        """
         return float(force)

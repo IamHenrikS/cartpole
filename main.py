@@ -45,7 +45,7 @@ env = CartPoleDynamics()
 ##### Selection of Controller #####
 #controller = PIDcontroller(env)            # PD-controller
 #controller = LQRcontroller(env)            # LQR-controller
-controller = nonlinearLQRcontroller(env)    # LQR-controller
+#controller = nonlinearLQRcontroller(env)    # LQR-controller
 #controller = None                          # Placeholder
 
 ##### MAIN PROGRAM #####

@@ -10,6 +10,9 @@ Source 2: Cart-Pole System: Equations of motion.
 https://courses.ece.ucsb.edu/ECE594/594D_W10Byl/hw/cartpole_eom.pdf 
 Source 3: Main source for the EoM
 https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
+
+# TO-DO Verify this in comparission with the backup files:
+1. Check so that the dynamics is the same.
 """
 import numpy as np
 
@@ -30,8 +33,8 @@ class CartPoleDynamics:
         self.dt = dt
         
         # Friction
-        self.mu_c = 0.1  # Cart-track friction coeff
-        self.mu_p = 0.01 # Cart-pole friction coeff
+        self.mu_c = 0.2 # Cart-track friction coeff
+        self.mu_p = 0.2 # Cart-pole friction coeff
 
         # Limits (meters)
         self.x_min = -5.5
@@ -49,7 +52,7 @@ class CartPoleDynamics:
         """
         self.x = 0
         self.x_dot = 0.0
-        self.theta = np.deg2rad(10)
+        self.theta = np.deg2rad(5) # I want to move this out to the system renderer. 
         self.theta_dot = np.deg2rad(0.0)
     
     @property
@@ -108,6 +111,8 @@ class CartPoleDynamics:
         self.x, self.x_dot, self.theta, self.theta_dot = state_next
 
         # Defining the limits for the hardstop
+        # Implement a spring damp mass for the solution 
+        # This way we avoid the cart just losing full momentum breaking the simulation.
         if self.x < self.x_min:
             self.x = self.x_min
             if self.x_dot < 0:
