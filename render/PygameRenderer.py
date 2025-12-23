@@ -3,6 +3,11 @@ Description: Renderer for seeing the cart-pole problem in pygame enviornment
 utilizes the import of pygame and simple geometries to have a visual inspection
 of the dynamics of the system.
 
+# Improvements to perform:
+1. Split the code into working subclasses for easier modification and integration
+2. Add a reset / stop button for the system
+3. Add a visual force arrow to the cart.
+4. Add a grid to the system.
 """
 
 import pygame
