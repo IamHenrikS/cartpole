@@ -6,6 +6,7 @@ suitable.
 
 Sources for improvement:
 1. https://www.youtube.com/watch?v=hRnofMxEf3Q
+2. Defined tuning method: Ziegler, or alike.
 
 """
 
@@ -18,8 +19,6 @@ class PIDcontroller:
         """
         self.theta_ref = 0.0
         self.x_ref = 0.0
-        self.integral_theta = 0.0
-        self.integral_x = 0.0
         
         # Parameters from (env, dynamics)
         g = env.g
@@ -31,6 +30,9 @@ class PIDcontroller:
         dt = env.dt
 
         alpha = 4.0/3.0 - m_pole/m_total
+
+        # Lagrange derived solutions with inclusion of counteractive forces. 
+        # Linearized around 0.
         self.A = np.array([[0, 1, 0, 0],
                            [0, -b_x/m_total, -m_pole*g/(m_total*alpha), -m_pole*d_theta/(m_total*alpha)],
                            [0, 0, 0, 1],
@@ -42,10 +44,12 @@ class PIDcontroller:
                             [-(1/(m_total * l * alpha))]
                             ])
         # PID gains
-        self.Kp = 50
-        self.Kd = 0.0
-        self.Kp_cart = 0.5
-        self.Kd_cart = 1
+        self.Kp = 20
+        self.Kd = 0.1
+        
+        self.Kp_cart = 0.9
+        self.Kd_cart = 0.1
+
         self.Ki = 0.0
         self.Ki_cart = 0.0
 
@@ -65,18 +69,19 @@ class PIDcontroller:
         # Errors
         x_error = self.x_ref - x
 
-        # Integrate
-        self.integral_theta += theta_error * dt
-        self.integral_x += x_error * dt
-
-        # PID control
-        F = (
+        # PD control:
+        # Pole stabilization
+        F_pole = (
             self.Kp * theta_error
-            + self.Ki * self.integral_theta
             + self.Kd * theta_dot
-            + self.Kp_cart * x_error
-            + self.Ki_cart * self.integral_x
+        )
+
+        # Cart regulation
+        F_cart = (
+            self.Kp_cart * x_error
             + self.Kd_cart * x_dot
         )
+
+        F = F_pole + F_cart
 
         return -F
