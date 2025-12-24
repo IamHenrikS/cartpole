@@ -1,3 +1,16 @@
+"""
+Description: The file utilizes matplotlib for evaluation of the systems
+generated in order to see the values.
+
+# Ideas:
+1. I want to loop through all the controllers and paramterize from the linearization.
+2. I want to plot the 4 states: x, x_dot, theta, theta_dot.
+3. Evaluate the time and learning precision.??
+4. Implement noise into the systems and evaluate the stability margins of the cart-pole.
+"""
+
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 
