@@ -13,6 +13,7 @@ https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
 
 # TO-DO Verify this in comparission with the backup files:
 1. Check so that the dynamics is the same.
+2. Update the descriptions and show the flow-chart of the system.
 """
 import numpy as np
 
@@ -44,22 +45,21 @@ class CartPoleDynamics:
         # State
         self.reset()
 
-    def reset(self):
+    def reset(self, x0=0.0, theta0=10):
         """
         Description: State initialization.
 
         Theta = 0: Upright, Theta < 0: Pole leaning left, Theta > 0: Pole leaning right.
+        The initial values of the systems.
         """
-        self.x = 0
+        self.x = float(x0)
         self.x_dot = 0.0
-        self.theta = np.deg2rad(5) # I want to move this out to the system renderer. 
-        self.theta_dot = np.deg2rad(0.0)
+        self.theta = np.deg2rad(theta0) # I want to move this out to the system renderer. 
+        self.theta_dot = np.deg2rad(0)
     
     @property
     def state(self):
-        """
-        Description: Creates new Numpy Array every call. 
-        """
+        """ Description: Creates new Numpy Array every call. """
         return np.array([self.x, self.x_dot, self.theta, self.theta_dot], dtype=float)
  
     def step(self, force):
@@ -70,6 +70,9 @@ class CartPoleDynamics:
         https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html where the
         showcase of how RK4 and RK2 is more effective than Euler approximations of the dynamics.  
         """
+        # Allow the last applied force be singulary stored.
+        # Used in PygameRenderer
+        self.applied_force = force
         dt = self.dt
 
         def derivatives(state, force):
