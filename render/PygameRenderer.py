@@ -5,7 +5,7 @@ of the dynamics of the system.
 
 # Improvements to perform:
 1. Split the code into working subclasses for easier modification and integration
-3. Add a visual force arrow to the cart.
+2. Add a visual force arrow to the cart.
 """
 import pygame
 import numpy as np
@@ -16,161 +16,134 @@ class PygameRenderer:
         self.env = env
         self.width = width
         self.height = height
-        self.center = width // 2                            # zero position in the middle
+        self.center = width // 2                         # zero position in the middle
         self.pixels_per_meter = ppm
-        self.cart_half_width = 40                           # half width of cart in pixels
-        self.ground_y = self.height - 250                   # Y-coordinate of ground
-        # Grid
-        self.grid_spacing = 1.0                             # meters
-        self.grid_color = (220, 220, 220)
+        self.cart_half_width = 40                        # half width of cart in pixels
+        self.cart_height = 40                            # full cart height
+        self.ground_y = self.height - 250                # Y-coordinate of ground
         self.hud_font = pygame.font.SysFont("Garamond", 14)
 
         self.screen = pygame.display.set_mode((width, height))
         self.clock = pygame.time.Clock()
-    
-    def draw_force_arrow(self):
-        """
-        Draw a fixed-length blue arrow outside the cart pointing toward it.
-        """
-        force = getattr(self.env, "applied_force", 0.0)
-
-        x_cart = self.world_to_screen_x(self.env.x)
-        y_cart = self.ground_y - 20  # top of cart
-        cart_half_width = self.cart_half_width
-        cart_half_height = 20
-        arrow_size = 8
-        arrow_length = 40  # fixed length in pixels
-        start_y = y_cart + cart_half_height
-        end_y = start_y
-        buffer = 5
-
-        if force > 0:  # force right → arrow comes from left
-            start_x = x_cart - cart_half_width - arrow_length - buffer # start outside left
-            end_x = x_cart - cart_half_width                # end at left edge
-            direction = 1
-        elif force < 0:  # force left → arrow comes from right
-            start_x = x_cart + cart_half_width + arrow_length # start outside right
-            end_x = x_cart + cart_half_width                    # end at right edge
-            direction = -1
-        else:  # no force, don't draw
-            return
-
-        # Draw line
-        pygame.draw.line(self.screen, (0, 0, 255), (start_x, start_y), (end_x, end_y), 5)
-        
-        if direction < 0:
-            end_x = end_x - 3
-        else:
-            end_x = end_x + 3
-        # Draw arrowhead at the end (pointing to cart edge)
-        pygame.draw.polygon(
-            self.screen,
-            (0, 0, 255),
-            [
-                (end_x, end_y),
-                (end_x - direction*arrow_size, end_y - arrow_size//2),
-                (end_x - direction*arrow_size, end_y + arrow_size//2)
-            ]
-        )
-
-
-
-
-    def draw_hud(self):
-        x = self.env.x
-        theta_deg = np.rad2deg(self.env.theta)
-
-        lines = [
-            f"x = {x:+.3f} m",
-            f"θ = {theta_deg:+.2f} deg",
-        ]
-
-        y0 = 15
-        for i, text in enumerate(lines):
-            surf = self.hud_font.render(text, True, (0, 0, 0))
-            self.screen.blit(surf, (15, y0 + i * 18))
-
-
-    def draw_coordinate_system(self):
-        screen = self.screen
-
-        # Place coordinate system in bottom-left corner
-        origin_x = 50                # small offset from left
-        origin_y = self.height - 50  # small offset from bottom
-        axis_len = 50                # shorter arrows
-
-        # X-axis
-        pygame.draw.line(screen, (0, 0, 255),
-                        (origin_x, origin_y),
-                        (origin_x + axis_len, origin_y), 3)
-        # Y-axis
-        pygame.draw.line(screen, (255, 0, 0),
-                        (origin_x, origin_y),
-                        (origin_x, origin_y - axis_len), 3)
-
-        # Arrowheads on x,y-axis
-        pygame.draw.polygon(screen, (0, 0, 255),
-                            [(origin_x + axis_len, origin_y),
-                            (origin_x + axis_len - 5, origin_y - 3),
-                            (origin_x + axis_len - 5, origin_y + 3)])
-        pygame.draw.polygon(screen, (255, 0, 0),
-                            [(origin_x, origin_y - axis_len),
-                            (origin_x - 3, origin_y - axis_len + 5),
-                            (origin_x + 3, origin_y - axis_len + 5)])
-
-        # Labels
-        font = pygame.font.SysFont("Garamond", 14)
-        screen.blit(font.render("+x", True, (0, 0, 255)), (origin_x + axis_len + 5, origin_y - 10))
-        screen.blit(font.render("+y", True, (255, 0, 0)), (origin_x - 15, origin_y - axis_len - 20))
 
     def world_to_screen_x(self, x_world):
         """Convert physics world x-coordinate to screen pixels."""
         return int(self.center + x_world * self.pixels_per_meter)
 
+    def draw_force_arrow(self):
+        """Draw a fixed-length blue arrow outside the cart pointing toward it."""
+        force = getattr(self.env, "applied_force", 0.0)
+        if force == 0:
+            return
+
+        x_cart = self.world_to_screen_x(self.env.x)
+        y_cart = self.ground_y - 20  # top of cart
+        start_y = end_y = y_cart + self.cart_height // 2  # vertical center of cart
+
+        arrow_length = 40
+        arrow_size = 8
+        visual_buffer = 3
+
+        if force > 0:  # rightward force
+            start_x = x_cart - self.cart_half_width - arrow_length - visual_buffer
+            end_x = x_cart - self.cart_half_width
+            direction = 1
+            arrow_tip_x = end_x + visual_buffer
+        else:          # leftward force
+            start_x = x_cart + self.cart_half_width + arrow_length + visual_buffer
+            end_x = x_cart + self.cart_half_width
+            direction = -1
+            arrow_tip_x = end_x - visual_buffer
+
+        # Draw line
+        pygame.draw.line(self.screen, (0, 0, 255), (start_x, start_y), (end_x, end_y), 5)
+
+        # Draw arrowhead
+        pygame.draw.polygon(
+            self.screen, (0, 0, 255),
+            [
+                (arrow_tip_x, end_y),
+                (arrow_tip_x - direction * arrow_size, end_y - arrow_size // 2),
+                (arrow_tip_x - direction * arrow_size, end_y + arrow_size // 2)
+            ]
+        )
+
+    def draw_hud(self):
+        """Render cart position and pole angle on the top-left HUD."""
+        x = self.env.x
+        theta_deg = np.rad2deg(self.env.theta)
+        lines = [f"x = {x:+.3f} m", f"θ = {theta_deg:+.2f} deg"]
+
+        for i, text in enumerate(lines):
+            surf = self.hud_font.render(text, True, (0, 0, 0))
+            self.screen.blit(surf, (15, 15 + i * 18))
+
+    def draw_coordinate_system(self):
+        """Draw a small X-Y axis in the bottom-left corner."""
+        origin_x, origin_y = 50, self.height - 50
+        axis_len = 50
+
+        # X-axis
+        pygame.draw.line(self.screen, (0, 0, 255), (origin_x, origin_y), (origin_x + axis_len, origin_y), 3)
+        # Y-axis
+        pygame.draw.line(self.screen, (255, 0, 0), (origin_x, origin_y), (origin_x, origin_y - axis_len), 3)
+
+        # Arrowheads
+        pygame.draw.polygon(self.screen, (0, 0, 255),
+                            [(origin_x + axis_len, origin_y),
+                             (origin_x + axis_len - 5, origin_y - 3),
+                             (origin_x + axis_len - 5, origin_y + 3)])
+        pygame.draw.polygon(self.screen, (255, 0, 0),
+                            [(origin_x, origin_y - axis_len),
+                             (origin_x - 3, origin_y - axis_len + 5),
+                             (origin_x + 3, origin_y - axis_len + 5)])
+
+        # Labels
+        self.screen.blit(self.hud_font.render("+x", True, (0, 0, 255)), (origin_x + axis_len + 5, origin_y - 10))
+        self.screen.blit(self.hud_font.render("+y", True, (255, 0, 0)), (origin_x - 15, origin_y - axis_len - 20))
+
     def draw_boundaries(self):
-        """Draw hard boundary walls at x_min and x_max."""
+        """Draw hard walls at x_min and x_max."""
         width = 10
         wall_color = (255, 0, 0)
 
-        x_left = self.world_to_screen_x(self.env.x_min) - self.cart_half_width - width/2
-        x_right = self.world_to_screen_x(self.env.x_max) + self.cart_half_width + width/2
+        x_left = self.world_to_screen_x(self.env.x_min) - self.cart_half_width - width / 2
+        x_right = self.world_to_screen_x(self.env.x_max) + self.cart_half_width + width / 2
 
-        # Walls
-        pygame.draw.rect(self.screen, wall_color, (x_left - width // 2, self.ground_y-width, width, 2*width))
-        pygame.draw.rect(self.screen, wall_color, (x_right - width // 2, self.ground_y-width, width, 2*width))
+        pygame.draw.rect(self.screen, wall_color, (x_left - width // 2, self.ground_y - width, width, 2 * width))
+        pygame.draw.rect(self.screen, wall_color, (x_right - width // 2, self.ground_y - width, width, 2 * width))
 
     def render(self):
-        screen = self.screen
-        screen.fill((255, 255, 255))
+        """Render the entire scene: ground, cart, pole, HUD, coordinate system, and force arrow."""
+        self.screen.fill((255, 255, 255))
 
-        # Ground line
-        pygame.draw.line(screen, (0, 0, 0), (0, self.ground_y), (self.width, self.ground_y), 4)
+        # Ground
+        pygame.draw.line(self.screen, (0, 0, 0), (0, self.ground_y), (self.width, self.ground_y), 4)
 
-        # Draw boundaries first
+        # Boundaries
         self.draw_boundaries()
 
-        # Cart position, world -> pygame
+        # Cart
         x_cart = self.world_to_screen_x(self.env.x)
         y_cart = self.ground_y
+        pygame.draw.rect(self.screen, (0, 0, 0),
+                         (x_cart - self.cart_half_width, y_cart - self.cart_height // 2,
+                          self.cart_half_width * 2, self.cart_height))
 
-        # Draw cart
-        pygame.draw.rect(screen, (0, 0, 0),
-                         (x_cart - self.cart_half_width, y_cart - 20,
-                          self.cart_half_width * 2, 40))
-
-        # Draw pole
-        l_p = int(self.env.l * self.pixels_per_meter)  # pixels for length l
+        # Pole
+        l_p = int(self.env.l * self.pixels_per_meter)
         theta = self.env.theta
-
         x_pole = x_cart + int(l_p * np.sin(theta))
         y_pole = y_cart - int(l_p * np.cos(theta))
-        
+
+        # HUD, coordinate system, and force arrow
         self.draw_hud()
         self.draw_coordinate_system()
         self.draw_force_arrow()
 
-        pygame.draw.line(screen, (255, 0, 0), (x_cart, y_cart), (x_pole, y_pole), 6)
-     
-    # --- Framerate control ---
+        # Pole line
+        pygame.draw.line(self.screen, (255, 0, 0), (x_cart, y_cart), (x_pole, y_pole), 6)
+
     def tick(self, fps=50):
+        """Control framerate."""
         self.clock.tick(fps)
