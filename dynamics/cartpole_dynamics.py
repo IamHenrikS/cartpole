@@ -41,7 +41,6 @@ class CartPoleDynamics:
         self.x_min = -5.5
         self.x_max =  5.5
 
-
         # State
         self.reset()
 

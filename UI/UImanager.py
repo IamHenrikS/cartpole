@@ -85,19 +85,27 @@ class UImanager:
             )
         )
 
+        self.reset_button = Button(
+            (800, y, 120, 40),      # Might need to tweak the x-value, not super aligned. 
+            "RESET",
+            self.sim.reset,
+        )
+
     def handle_event(self,event):
-        if self.sim.state != simState.menu:
-            return
         
-        for i in self.widgets:
-            i.handle_event(event)
+        if self.sim.state == simState.menu:
+            for i in self.widgets:
+                i.handle_event(event)
+        elif self.sim.state == simState.running:
+            self.reset_button.handle_event(event)
         
     def draw(self,screen):
-        if self.sim.state != simState.menu:
-            return
-        
-        for i in self.widgets:
-            i.draw(screen)
+
+        if self.sim.state == simState.menu:    
+            for i in self.widgets:
+                i.draw(screen)
+        elif self.sim.state == simState.running:
+            self.reset_button.draw(screen)
 
         
 
