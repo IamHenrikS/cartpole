@@ -47,7 +47,7 @@ from dynamics.cartpole_dynamics import CartPoleDynamics
 from controller.KeyboardController import KeyboardController
 from controller.PIDcontroller import PIDcontroller
 from controller.LQRcontroller import LQRcontroller
-from controller.nonlinearLQRcontroller import nonlinearLQRcontroller
+from controller.ModelPredictiveController import ModelPredictiveController
 
 # =================
 # Config
@@ -109,7 +109,7 @@ class simulation():
         elif name == "LQR": 
             self.controller = LQRcontroller(self.env)
         elif name == "NLLQR":
-            self.controller = nonlinearLQRcontroller(self.env)
+            self.controller = ModelPredictiveController(self.env)
         else:
             raise ValueError("Unknown controller")
         
