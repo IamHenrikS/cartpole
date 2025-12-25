@@ -100,8 +100,9 @@ class LQRcontroller:
         # Remodeled for saturation
         kx=0.3
         kd=0.25
+        pd = 10
         theta_ref = kx * (self.x_ref - x) - kd * x_dot
-        theta_ref = np.clip(theta_ref, -np.deg2rad(5), np.deg2rad(5))
+        theta_ref = np.clip(theta_ref, -np.deg2rad(pd), np.deg2rad(pd))
 
         # --- Inner loop (fast LQR) ---
         x_lin = np.array([
