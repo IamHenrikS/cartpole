@@ -14,6 +14,7 @@ Sources:
 4. MPC: https://www.mdpi.com/1424-8220/22/1/243
 5. https://pmc.ncbi.nlm.nih.gov/articles/PMC8749679/ 
 6. https://www.youtube.com/watch?v=NkeqFtKH4Yo
+7. https://skoge.folk.ntnu.no/prost/proceedings/adconip-2014/pdf/SUBS61TO80/0068/0068_FI.pdf
 
 """
 import numpy as np
