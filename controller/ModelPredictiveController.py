@@ -27,7 +27,7 @@ class ModelPredictiveController:
     def __init__(self, env):
         # init conditions (references)
         self.env = env
-
+        self.x_ref = 0.0
         # physical units
         self.g = env.g
         self.dt = env.dt
@@ -43,13 +43,16 @@ class ModelPredictiveController:
 
         # MPC parameters
         self.N = 40     # Time horizon (steps)
-        self.u_max = 40.0 # For limit (evaluate if this is needed)
+        self.u_max = 50.0 # For limit (evaluate if this is needed)
 
         # Weights 
-        self.w_E = 20      # Energy
-        self.w_theta = 20  # Angle
-        self.w_x = 0.1     # State
-        self.w_u = 0.01    # Input force
+        self.w_E = 30      # Energy
+        self.w_theta = 40  # Angle
+        self.w_x = 15     # Pos
+        self.w_u = 0.1    # Input force
+
+        # "Warm start of MPC"
+        self.init_MPC = None
 
         # Initialize the definitions.
         self.build_solver()
@@ -61,7 +64,10 @@ class ModelPredictiveController:
             :param state: The state variables.
             :param force: u = Force (input).
             """
-            x, x_dot, theta, theta_dot = state
+            x = state[0]
+            x_dot = state[1]
+            theta = state[2]
+            theta_dot = state[3]
 
             # Rework for casADi
             sin_t = casadi.sin(theta)
@@ -118,17 +124,18 @@ class ModelPredictiveController:
         # Improvements:
         1. Remodel using a method of collocation instead of RK4
 
-        :params : 
+        :params self: Class and enviornment specific variables and functions. 
         """
         nx = 4 # No. of states
         nu = 1 # No. of inputs
 
-        # Decision variables
+        # Decision variables (can switch to MX for NMPC)
         X = casadi.SX.sym('X', nx, self.N + 1)
         U = casadi.SX.sym('U', nu, self.N)
 
         # Initial state
         X0 = casadi.SX.sym('X0', nx)
+        Xref = casadi.SX.sym('Xref', self.N+1)
 
         # Initialize the cost function
         J = 0 # Cost
@@ -151,7 +158,7 @@ class ModelPredictiveController:
             # Cost function:
             J += (self.w_E * (E-E_ref)**2
                 + self.w_theta*(1 - casadi.cos(xk[2]))
-                + self.w_x * xk[0]**2
+                + self.w_x * (xk[0] - Xref[k])**2
                 + self.w_u * uk[0]**2
             )
 
@@ -171,12 +178,18 @@ class ModelPredictiveController:
             constraints.append(X[:, k+1]-x_next)
 
         xN = X[:, -1] # Final n=N
-
+        
+        # Terminal equilibrium constraints
+        constraints.append(xN[0] - self.x_ref)   # cart position
+        constraints.append(xN[1])                # cart velocity = 0
+        constraints.append(xN[2])                # pole angle = 0
+        constraints.append(xN[3])                # pole angular velocity = 0
         # Add terminal cost (once)
         JN = (
-            50 * (1 - casadi.cos(xN[2])) +
-            1.0 * xN[0]**2 +
-            0.1 * xN[3]**2
+            5.0 * (xN[0] - Xref[self.N])**2                    # Position
+            + 1.5 * xN[1]**2                  # Velocity cart    
+            + 20 * (1 - casadi.cos(xN[2]))    # Angle
+            + 1.0 * xN[3]**2                  # Angle Vel
         )
         
         J += JN
@@ -184,10 +197,13 @@ class ModelPredictiveController:
         # NLP (Non Linear Programming)
         # Indexsation for casADI
         nlp = {
-            'x': casadi.vertcat(casadi.reshape(X, -1, 1), casadi.reshape(U, -1, 1)),
+            'x': casadi.vertcat(
+                casadi.reshape(X, -1, 1),
+                casadi.reshape(U, -1, 1)
+            ),
             'f': J,
             'g': casadi.vertcat(*constraints),
-            'p': X0
+            'p': casadi.vertcat(X0, Xref)
         }
 
         """
@@ -199,19 +215,36 @@ class ModelPredictiveController:
         """
         opts = {
                 'ipopt.print_level': 0,
-                'print_time': 0
+                'print_time': 0,
+                # --- SPEED LIMITERS ---
+                'ipopt.max_iter': 40,            # hard stop on iterations
+                'ipopt.tol': 1e-3,                # convergence tolerance
+                'ipopt.acceptable_tol': 1e-2,     # early acceptable solution
+                'ipopt.acceptable_iter': 5        # accept if good enough for 5 iters
         }
 
         self.nlp_solver = casadi.nlpsol('solver', 'ipopt', nlp, opts)
         self.n_constraints = sum(c.size1() for c in constraints)
 
     def get_force(self, state, dt=None):
+        """
+        Docstring for get_force
+        
+        :param self: Description
+        :param state: Description
+        :param dt: Description
+        """
         x0 = np.asarray(state).flatten()
+        Xref = np.linspace(x0[0], self.x_ref, self.N+1)
 
         # Initial
         nx = 4
         nu = 1
-        x_init = np.zeros((nx*(self.N + 1) + nu * self.N, 1))
+
+        if self.init_MPC is None:
+            x_init = np.zeros((nx*(self.N + 1) + nu * self.N, 1))
+        else:
+            x_init = self.init_MPC
         
         """ Bounds on decision variables """
         # g(X,U)=0 and lbx =< (X,U) =< ubx
@@ -243,7 +276,7 @@ class ModelPredictiveController:
 
         sol = self.nlp_solver(
              x0 = x_init,
-             p = x0,
+             p = np.concatenate([x0, Xref]),
              lbg = np.zeros(self.n_constraints),
              ubg = np.zeros(self.n_constraints),
              lbx = lbx,
@@ -251,6 +284,18 @@ class ModelPredictiveController:
         )
 
         w_opts = sol['x'].full().flatten()
+
+        """ Shift the trajectory of the MPC """
+        X_opt = w_opts[:nx*(self.N+1)].reshape((self.N+1, nx))
+        U_opt = w_opts[nx*(self.N+1):]
+
+        X_shift = np.vstack([X_opt[1:], X_opt[-1]])
+        U_shift = np.hstack([U_opt[1:], U_opt[-1]])
+
+        self.init_MPC = np.concatenate([
+            X_shift.flatten(),
+            U_shift.flatten()
+        ]).reshape((-1,1))
 
         offset = nx*(self.N + 1) 
         u0 = w_opts[offset]
