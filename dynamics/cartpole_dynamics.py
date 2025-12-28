@@ -44,7 +44,7 @@ class CartPoleDynamics:
         # State
         self.reset()
 
-    def reset(self, x0=0.0, theta0=10):
+    def reset(self, x0=0.0, theta0=-180):
         """
         Description: State initialization.
 
