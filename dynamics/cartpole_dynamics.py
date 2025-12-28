@@ -87,19 +87,19 @@ class CartPoleDynamics:
 
             # Equations of Motion (ddot(theta), ddot(x))
             # Lagrangian theory with non-conservative terms. 
-            theta_acc = (
+            theta_ddot = (
                 g * sin_t 
                 - cos_t * (force + m_p * l * theta_dot**2 * sin_t) / m_t 
                 - (mu_p * theta_dot) / (l*alpha)
             ) 
 
-            x_acc = (
+            x_ddot = (
                 (force + m_p * l * theta_dot**2 * sin_t)/m_t 
-                - (m_p * l * theta_acc * cos_t / m_t)
+                - (m_p * l * theta_ddot * cos_t / m_t)
                 - mu_c*x_dot
             )
 
-            return np.array([x_dot, x_acc, theta_dot, theta_acc], dtype=float)
+            return np.array([x_dot, x_ddot, theta_dot, theta_ddot], dtype=float)
 
         state = np.array([self.x, self.x_dot, self.theta, self.theta_dot], dtype=float)
 
