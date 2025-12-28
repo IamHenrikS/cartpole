@@ -135,7 +135,7 @@ class ModelPredictiveController:
 
         # Initial state
         X0 = casadi.SX.sym('X0', nx)
-        Xref = casadi.SX.sym('Xref', self.N+1)
+        #Xref = casadi.SX.sym('Xref', self.N+1)
 
         # Initialize the cost function
         J = 0 # Cost
@@ -158,7 +158,7 @@ class ModelPredictiveController:
             # Cost function:
             J += (self.w_E * (E-E_ref)**2
                 + self.w_theta*(1 - casadi.cos(xk[2]))
-                + self.w_x * (xk[0] - Xref[k])**2
+                + self.w_x * (casadi.cos(xk[2])**2)*(xk[0] - self.x_ref)**2
                 + self.w_u * uk[0]**2
             )
 
@@ -179,14 +179,14 @@ class ModelPredictiveController:
 
         xN = X[:, -1] # Final n=N
         
-        # Terminal equilibrium constraints
-        constraints.append(xN[0] - self.x_ref)   # cart position
-        constraints.append(xN[1])                # cart velocity = 0
-        constraints.append(xN[2])                # pole angle = 0
-        constraints.append(xN[3])                # pole angular velocity = 0
+        # Terminal equilibrium constraints (HARD CODE - not sought after)
+       # constraints.append(xN[0] - self.x_ref)   # cart position
+       # constraints.append(xN[1])                # cart velocity = 0
+       # constraints.append(xN[2])                # pole angle = 0
+       # constraints.append(xN[3])                # pole angular velocity = 0
         # Add terminal cost (once)
         JN = (
-            5.0 * (xN[0] - Xref[self.N])**2                    # Position
+            50.0 * (xN[0] - self.x_ref)**2                    # Position
             + 1.5 * xN[1]**2                  # Velocity cart    
             + 20 * (1 - casadi.cos(xN[2]))    # Angle
             + 1.0 * xN[3]**2                  # Angle Vel
@@ -203,7 +203,7 @@ class ModelPredictiveController:
             ),
             'f': J,
             'g': casadi.vertcat(*constraints),
-            'p': casadi.vertcat(X0, Xref)
+            'p': X0
         }
 
         """
@@ -217,7 +217,7 @@ class ModelPredictiveController:
                 'ipopt.print_level': 0,
                 'print_time': 0,
                 # --- SPEED LIMITERS ---
-                'ipopt.max_iter': 40,            # hard stop on iterations
+                'ipopt.max_iter': 100,            # hard stop on iterations
                 'ipopt.tol': 1e-3,                # convergence tolerance
                 'ipopt.acceptable_tol': 1e-2,     # early acceptable solution
                 'ipopt.acceptable_iter': 5        # accept if good enough for 5 iters
@@ -235,7 +235,7 @@ class ModelPredictiveController:
         :param dt: Description
         """
         x0 = np.asarray(state).flatten()
-        Xref = np.linspace(x0[0], self.x_ref, self.N+1)
+        #Xref = np.linspace(x0[0], self.x_ref, self.N+1)
 
         # Initial
         nx = 4
@@ -276,7 +276,7 @@ class ModelPredictiveController:
 
         sol = self.nlp_solver(
              x0 = x_init,
-             p = np.concatenate([x0, Xref]),
+             p = x0, #np.concatenate([x0, Xref]),
              lbg = np.zeros(self.n_constraints),
              ubg = np.zeros(self.n_constraints),
              lbx = lbx,
