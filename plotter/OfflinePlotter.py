@@ -9,8 +9,6 @@ generated in order to see the values.
 4. Implement noise into the systems and evaluate the stability margins of the cart-pole.
 """
 
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -22,6 +20,7 @@ class OfflinePlotter:
         self.theta_err = []
         self.x_err = []
         self.t = []
+        self.states = []
 
         self.title = title
 
@@ -33,7 +32,7 @@ class OfflinePlotter:
         :param state: contains the state variables.
         :param t: contians the time stored. 
         """
-        x, _, theta, _ = state
+        x, x_dot, theta, theta_dot = state
 
         # Theta error (wrapped)
         theta_err = self.theta_ref - theta
@@ -46,6 +45,9 @@ class OfflinePlotter:
         self.theta_err.append(theta_err_deg)
         self.x_err.append(x_err)
         self.t.append(t)
+
+        self.states.append(state)
+
 
     def plot(self):
         """
@@ -70,4 +72,42 @@ class OfflinePlotter:
         ax_x.grid(True)
         ax_x.legend()
 
+        plt.show()
+
+    def StatePlotter(self):
+        """
+        Plot the 4 states in a 2x2 grid.
+        """ 
+        states_array = np.array(self.states)
+
+        fig, axes = plt.subplots(2, 2, figsize=(10, 8), sharex=True)
+        fig.suptitle("CIP States Over Time", fontsize=16, fontname='Garamond')
+        
+        # POSITION
+        axes[0, 0].plot(self.t, states_array[:,0], 'b-', label='position (m)')
+        axes[0, 0].set_ylabel('x (m)', fontsize=14, fontname='Garamond')
+        axes[0, 0].grid(True)
+        axes[0, 0].legend(fontsize=12)
+        
+        # VELOCITY
+        axes[0, 1].plot(self.t, states_array[:,1], 'g-', label='velocity (m/s)')
+        axes[0, 1].set_ylabel(r'$\dot{x}$ (m/s)', fontsize=14, fontname='Garamond')
+        axes[0, 1].grid(True)
+        axes[0, 1].legend(fontsize=12)
+
+        # ANGLE
+        axes[1, 0].plot(self.t, np.degrees(states_array[:,2]), 'r-', label='Angle (deg)')
+        axes[1, 0].set_ylabel(r'$\theta$ (deg)', fontsize=14, fontname='Garamond')
+        axes[1, 0].set_xlabel('Time (s)', fontsize=14, fontname='Garamond')
+        axes[1, 0].grid(True)
+        axes[1, 0].legend(fontsize=12)
+
+        # ANGULAR VELOCITY
+        axes[1, 1].plot(self.t, np.degrees(states_array[:,3]), 'm-', label='Angular velocity (deg/s)')
+        axes[1, 1].set_ylabel(r'$\dot{\theta}$ (deg/s)', fontsize=14, fontname='Garamond')
+        axes[1, 1].set_xlabel('Time (s)', fontsize=14, fontname='Garamond')
+        axes[1, 1].grid(True)
+        axes[1, 1].legend(fontsize=12)
+
+        plt.tight_layout(rect=[0,0,1,0.96])
         plt.show()
