@@ -37,6 +37,8 @@ Additional Notes:
 - Verify the implementations and update the ULM.dio with how the code is structured.
 - The system uses getters and setters for cleaner logic and easier access to environment parameters.
 - The modular design allows swapping controllers, plotting methods, and renderers as needed.
+
+- Improvments: GET THE UI and allow to choice online and offline mode for the system.
 """
 
 import sys
@@ -108,7 +110,7 @@ class simulation():
             self.controller = PIDcontroller(self.env)
         elif name == "LQR": 
             self.controller = LQRcontroller(self.env)
-        elif name == "NLLQR":
+        elif name == "NMPC":
             self.controller = ModelPredictiveController(self.env)
         else:
             raise ValueError("Unknown controller")
@@ -215,6 +217,7 @@ class simulation():
             self.plotter.log(self.env.state, t)
             t += dt
         self.plotter.plot()
+        self.plotter.StatePlotter()
 
 # =================
 # Main init
@@ -224,5 +227,5 @@ if __name__ == "__main__":
     if MODE == "online":
         sim.run_online()
     else:
-        sim.set_controller("LQR") # Offline preset
+        sim.set_controller("NMPC") # Offline preset
         sim.run_offline()

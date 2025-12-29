@@ -41,10 +41,13 @@ class CartPoleDynamics:
         self.x_min = -5.5
         self.x_max =  5.5
 
-        # State
-        self.reset()
+        # State: Initiliaztion
+        self.x = None
+        self.x_dot = None
+        self.theta = None
+        self.theta_dot = None
 
-    def reset(self, x0=0.0, theta0=-180):
+    def reset(self, x0: float, theta0: float):
         """
         Description: State initialization.
 
@@ -71,6 +74,9 @@ class CartPoleDynamics:
         """
         # Allow the last applied force be singulary stored.
         # Used in PygameRenderer
+        if self.x == None:
+            raise RuntimeError("Need to be reset before calling")
+
         self.applied_force = force
         dt = self.dt
 

@@ -116,12 +116,15 @@ class PygameRenderer:
     def render(self):
         """Render the entire scene: ground, cart, pole, HUD, coordinate system, and force arrow."""
         self.screen.fill((255, 255, 255))
-
+        
         # Ground
         pygame.draw.line(self.screen, (0, 0, 0), (0, self.ground_y), (self.width, self.ground_y), 4)
 
         # Boundaries
         self.draw_boundaries()
+
+        if self.env.x is None:
+            return
 
         # Cart
         x_cart = self.world_to_screen_x(self.env.x)

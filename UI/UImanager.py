@@ -31,11 +31,11 @@ class UImanager:
         self.widgets = []
         self.angle_input = initInput((10, 70, 70, 30), 
                                      "Theta [deg]", 
-                                     f"{np.rad2deg(sim.env.theta):.2f}")
+                                     f"N/A")
         
         self.x_input = initInput((110, 70, 70, 30), 
                                  "X [m]", 
-                                 f"{sim.env.x:.2f}")
+                                 "N/A")
 
         self._create_menu_buttons()
 
