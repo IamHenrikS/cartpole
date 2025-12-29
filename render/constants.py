@@ -21,7 +21,7 @@ GROUND_OFFSET_Y = 250
 
 GRID_COLOR = (230, 230, 230)
 GRID_MAJOR_COLOR = (200, 200, 200)
-GRID_SPACING_M = 1      # meters
+GRID_SPACING_M = 1        # meters
 GRID_MAJOR_EVERY = 1      # every N lines
 
 AXIS_FONT_SIZE = 12

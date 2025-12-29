@@ -11,17 +11,14 @@ https://courses.ece.ucsb.edu/ECE594/594D_W10Byl/hw/cartpole_eom.pdf
 Source 3: Main source for the EoM
 https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
 
-# TO-DO Verify this in comparission with the backup files:
-1. Check so that the dynamics is the same.
-2. Update the descriptions and show the flow-chart of the system.
+Written by @Henrik S, 2025
 """
 import numpy as np
 
 class CartPoleDynamics:
     def __init__(self, dt=0.030):
         """
-        Description: Initializes the parameters of the cart-pole. It also ensures
-        that the state is resetted().
+        Description: Initializes the physical parameters of the cart-pole.
 
         Source: https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
         """
@@ -32,16 +29,17 @@ class CartPoleDynamics:
         self.m_t = self.m_c + self.m_p
         self.l = 1
         self.dt = dt
+        self.applied_force = 0.0
         
         # Friction
         self.mu_c = 0.2 # Cart-track friction coeff
         self.mu_p = 0.2 # Cart-pole friction coeff
 
         # Limits (meters)
-        self.x_min = -5.5
-        self.x_max =  5.5
+        self.x_min = -4.5
+        self.x_max =  4.5
 
-        # State: Initiliaztion
+        # State: Initiliaztion (sets in main.py)
         self.x = None
         self.x_dot = None
         self.theta = None
@@ -56,8 +54,8 @@ class CartPoleDynamics:
         """
         self.x = float(x0)
         self.x_dot = 0.0
-        self.theta = np.deg2rad(theta0) # I want to move this out to the system renderer. 
-        self.theta_dot = np.deg2rad(0)
+        self.theta = np.deg2rad(theta0)
+        self.theta_dot = 0.0
     
     @property
     def state(self):
@@ -67,14 +65,16 @@ class CartPoleDynamics:
     def step(self, force):
         """
         Description: Generates the steps itreative progressions of the dynamics.
-        Advance the cart-pole state by one timestep using 4th-order Runge-Kutta integration.
-        Improvements of the small steps in the system. This is based on the works of
-        https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html where the
-        showcase of how RK4 and RK2 is more effective than Euler approximations of the dynamics.  
+        Advances the cart-pole state by one timestep using 4th-order Runge-Kutta integration.
+        Improvements of the small steps in the system.
+         
+        Source: https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html 
+        
+        Note: Comment on how RK4 and RK2 is more effective than Euler approximations of the dynamics
+        in accordance with the source.  
         """
-        # Allow the last applied force be singulary stored.
-        # Used in PygameRenderer
-        if self.x == None:
+        # Makes sure we do not init without state[0] when activating cart-pole.
+        if self.x is None or self.theta is None:
             raise RuntimeError("Need to be reset before calling")
 
         self.applied_force = force
@@ -82,17 +82,18 @@ class CartPoleDynamics:
 
         def derivatives(state, force):
             """
-            Description: Contains the derivative states of the dynamics
+            Description: Contains the derivative states of the dynamics that is generated
+            from the EoM that also accounts for pole-friction and cart-friction. The EoM
+            is generated through Lagrange theory wit non-conservative terms.
             """
-            x, x_dot, theta, theta_dot = state
+            _, x_dot, theta, theta_dot = state
             g, m_p, m_t, l, mu_p, mu_c = self.g, self.m_p, self.m_t, self.l, self.mu_p, self.mu_c
 
             sin_t = np.sin(theta)
             cos_t = np.cos(theta)
             alpha = 4.0/3.0 - (m_p * cos_t**2)/m_t
 
-            # Equations of Motion (ddot(theta), ddot(x))
-            # Lagrangian theory with non-conservative terms. 
+            # Equations of Motion (ddot(theta), ddot(x)) 
             theta_ddot = (
                 g * sin_t 
                 - cos_t * (force + m_p * l * theta_dot**2 * sin_t) / m_t 
@@ -118,9 +119,7 @@ class CartPoleDynamics:
         state_next = state + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
         self.x, self.x_dot, self.theta, self.theta_dot = state_next
 
-        # Defining the limits for the hardstop
-        # Implement a spring damp mass for the solution 
-        # This way we avoid the cart just losing full momentum breaking the simulation.
+        # Asserting hardlimits of the system.
         if self.x < self.x_min:
             self.x = self.x_min
             if self.x_dot < 0:
