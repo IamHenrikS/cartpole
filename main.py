@@ -31,6 +31,10 @@ MODE = "offline"          # "online" or "offline"
 SIM_TIME = 10.0          # seconds (offline mode)
 FPS = 50                 # frames per second (online mode)
 
+# ======================
+# Only works Offline: Movement in x-dir during sim
+# ======================
+OFFLINE_SWEEP = False     # False: Disregard: NEED TO VERIFY THIS
 
 # ======================
 # Simulation state
@@ -63,9 +67,9 @@ class Simulation:
         self.env = CartPoleDynamics()
         self.controller = None
 
-        # Initial conditions
+        # Initial conditions (offline mode)
         self.init_x = 0.0
-        self.init_theta = 20.0
+        self.init_theta = 30.0
 
         if self.mode == "online":
             self._init_online_mode()
@@ -188,11 +192,29 @@ class Simulation:
         dt = self.env.dt
 
         while t < SIM_TIME:
-            self.step_simulation()
+
+            # --- minimal sweep logic ---
+            if OFFLINE_SWEEP:
+                if t < 0.3 * SIM_TIME:
+                    x_ref = -2.0
+                elif t < 0.7 * SIM_TIME:
+                    x_ref = 1.0
+                else:
+                    x_ref = self.init_x
+            else:
+                x_ref = self.init_x
+            
+            self.env.x_ref = x_ref
+            force = self.controller.get_force(
+                self.env.state,
+                dt,
+            )
+
+            self.env.step(force)
             self.plotter.log(self.env.state, t)
+
             t += dt
 
-        self.plotter.plot()
         self.plotter.StatePlotter()
 
 
@@ -206,5 +228,5 @@ if __name__ == "__main__":
     if MODE == "online":
         sim.run_online()
     else:
-        sim.set_controller("NMPC")  # Offline preset
+        sim.set_controller("LQR")  # Offline preset
         sim.run_offline()

@@ -30,6 +30,9 @@ class CartPoleDynamics:
         self.l = 1
         self.dt = dt
         self.applied_force = 0.0
+
+        # Add to allow for offline sweep.
+        self.x_ref = 0.0
         
         # Friction
         self.mu_c = 0.2 # Cart-track friction coeff
