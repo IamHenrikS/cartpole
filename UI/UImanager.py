@@ -60,7 +60,7 @@ class UImanager:
             ("Keyboard", "KEY"),
             ("PID", "PID"),
             ("LQR", "LQR"),
-            ("NL LQR", "NLLQR"),
+            ("NMPC", "NMPC"),
         ]
 
         self.buttons = []
