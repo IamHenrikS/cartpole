@@ -1,46 +1,17 @@
 """
-Main file for the CartPole project.
+Entry point for the CartPole simulation.
 
-Modules and Components:
+This module is responsible for:
+- Selecting simulation mode (online / offline)
+- Wiring together controllers, environment, renderer, and UI
+- Running the main simulation loop
 
-1. Controllers:
-    - PIDController: Standard PID controller for stabilizing the cart-pole.
-    - LQRController: Linear Quadratic Regulator for optimal control.
-    - NonLinearLQR: Non-linear extension of LQR for improved performance.
-    - MLController: Machine learning-based controller (optional).
+All domain logic (dynamics, control, rendering) lives in separate modules.
 
-2. Dynamics:
-    - cartpole_dynamics(): Simulates the dynamics of the cart and pole system.
-
-3. Plotting:
-    - LivePlotter(): Real-time plotting of system errors and states. Used in conjunction with Pygame for visualization.
-    - OfflinePlotter(): Post-simulation plotting, optimized for analytics and batch simulations.
-
-4. Rendering:
-    - PygameRenderer(): Enables visualization using Pygame, showing the cart, pole, and applied forces.
-
-5. User Interface:
-    - UIManager(): Handles user interface elements and interactions.
-
-Operation Modes:
-
-1. Online Mode:
-    - Activates PygameRenderer and LivePlotter.
-    - Runs the simulation in real-time until the window is closed.
-
-2. Offline Mode:
-    - Uses OfflinePlotter for faster simulation.
-    - Stores simulation results for analysis.
-    - Requires specifying a simulation time `SIM_TIME`.
-
-Additional Notes:
-- Verify the implementations and update the ULM.dio with how the code is structured.
-- The system uses getters and setters for cleaner logic and easier access to environment parameters.
-- The modular design allows swapping controllers, plotting methods, and renderers as needed.
-
-- Improvments: GET THE UI and allow to choice online and offline mode for the system.
+# Note: AI cleanup with Clean Code in mind
 """
 
+from enum import Enum
 import sys
 import pygame
 import numpy as np
@@ -51,143 +22,145 @@ from controller.PIDcontroller import PIDcontroller
 from controller.LQRcontroller import LQRcontroller
 from controller.ModelPredictiveController import ModelPredictiveController
 
-# =================
-# Config
-# =================
-MODE = "online"    # "online" or "offline"
-SIM_TIME = 10.0    # seconds
-FPS = 50           # Framerate for online mode
 
-class simState:
-    menu = "menu"
-    running = "running"
-    stopped = "stopped"
+# ======================
+# Configuration
+# ======================
 
-class simulation():
-    def __init__(self, mode="online"):
+MODE = "offline"          # "online" or "offline"
+SIM_TIME = 10.0          # seconds (offline mode)
+FPS = 50                 # frames per second (online mode)
+
+
+# ======================
+# Simulation state
+# ======================
+
+class SimState(Enum):
+    MENU = "menu"
+    RUNNING = "running"
+
+
+# ======================
+# Simulation
+# ======================
+
+class Simulation:
+    """
+    High-level simulation orchestrator.
+
+    Responsibilities:
+    - Manage simulation state
+    - Connect controller, environment, renderer, and UI
+    - Run online or offline simulation loops
+    """
+    
+    def __init__(self, mode: str = "online"):
         self.mode = mode
-        self.state = simState.menu
         self.running = True
+        self.state = SimState.MENU
 
         self.env = CartPoleDynamics()
         self.controller = None
-        
-        # Store pending initial conditions.
+
+        # Initial conditions
         self.init_x = 0.0
-        self.init_theta = 10.0
+        self.init_theta = 20.0
 
         if self.mode == "online":
-            pygame.init()
-
-            # Import the classes
-            from render.PygameRenderer import PygameRenderer
-            from UI.UImanager import UImanager
-
-            self.renderer = PygameRenderer(self.env)
-            self.ui = UImanager(self) # If set to "None" we ignore ui. 
-
-        if self.mode == "offline":
-            from plotter.OfflinePlotter import OfflinePlotter
-
-            self.plotter = OfflinePlotter()
-
-    # =================
-    # Controller setup
-    # =================
-    def set_controller(self, name):
-        """
-        Docstring for set_controller
-        
-        :param self: Description
-        :param name: Description
-        """
-        if self.state != simState.menu:
-            return
-        
-        if name == "KEY":
-            self.controller = KeyboardController(self.env)
-        elif name == "PID":
-            self.controller = PIDcontroller(self.env)
-        elif name == "LQR": 
-            self.controller = LQRcontroller(self.env)
-        elif name == "NMPC":
-            self.controller = ModelPredictiveController(self.env)
+            self._init_online_mode()
         else:
-            raise ValueError("Unknown controller")
-        
-        print(f"Controller selected: {name}")
+            self._init_offline_mode()
 
-    # =================
-    # Sim control
-    # ================= 
-    def start(self):
-        """
-        Docstring for start
-        
-        :param self: Description
-        """
-        if self.controller is None:
-            print("Select a controller")
-            return
-        
-        self.init_theta = self.ui.angle_input.value(default=10.0)
-        self.init_x = self.ui.x_input.value(default=0.0)
+    # ------------------
+    # Initialization
+    # ------------------
 
-        self.env.reset(
-            x0 = self.init_x,
-            theta0 = self.init_theta
+    def _init_online_mode(self):
+        from render.PygameRenderer import PygameRenderer
+        from UI.UImanager import UImanager
+
+        pygame.init()
+
+        self.renderer = PygameRenderer(self.env)
+        self.ui = UImanager(
+            on_start=self.start,
+            on_reset=self.reset,
+            on_set_controller=self.set_controller,
+            get_state=lambda: self.state.value,
         )
 
-        self.state = simState.running
-        print("Simulation started (def start(self))")
+    def _init_offline_mode(self):
+        from plotter.OfflinePlotter import OfflinePlotter
+        self.plotter = OfflinePlotter()
+
+    # ------------------
+    # Controller setup
+    # ------------------
+
+    def set_controller(self, name: str):
+        """Select controller by name (UI or offline preset)."""
+        if self.state != SimState.MENU:
+            return
+
+        controllers = {
+            "KEY": KeyboardController,
+            "PID": PIDcontroller,
+            "LQR": LQRcontroller,
+            "NMPC": ModelPredictiveController,
+        }
+
+        self.controller = controllers[name](self.env)
+
+    # ------------------
+    # Simulation control
+    # ------------------
+
+    def start(self):
+        """Start simulation from UI-selected initial conditions."""
+        if self.controller is None:
+            print("Select a controller before starting.")
+            return
+
+        self.init_x = self.ui.x_input.value(default=0.0)
+        self.init_theta = self.ui.angle_input.value(default=10.0)
+
+        self.env.reset(x0=self.init_x, theta0=self.init_theta)
+        self.state = SimState.RUNNING
 
     def reset(self):
-        """
-        Docstring for reset
-        
-        :param self: Description
-        """
-        self.env.reset(
-            x0 = self.init_x,
-            theta0 = self.init_theta
-        )
-        self.state = simState.menu
-        print("Simulation reset (def reset(self))")
+        """Reset simulation to initial conditions."""
+        self.env.reset(x0=self.init_x, theta0=self.init_theta)
+        self.state = SimState.MENU
 
-    # =================
-    # Online loop
-    # ================= 
+    # ------------------
+    # Online simulation
+    # ------------------
+
     def handle_events(self):
-        """
-        Docstring for handle_events
-        
-        :param self: Description
-        """
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-
             self.ui.handle_event(event)
 
-    def update(self):
-        """
-        Docstring for update
-        
-        :param self: Description
-        """
-        if self.state != simState.running:
-            return
-        
-        force = self.controller.get_force(self.env.state, self.env.dt)
+    def step_simulation(self):
+        dt = self.env.dt
+        force = self.controller.get_force(self.env.state, dt)
         self.env.step(force)
 
+    def update(self):
+        if self.state != SimState.RUNNING:
+            return
+        self.step_simulation()
+
     def render(self):
-        """
-        Docstring for render
-        
-        :param self: Description
-        """
-        self.renderer.render()
+        if self.state == SimState.MENU:
+            x = self.ui.x_input.value(default=0.0)
+            theta = np.deg2rad(self.ui.angle_input.value(default=0.0))
+            self.renderer.render(preview=(x, theta))
+        else:
+            self.renderer.render()
+
         self.ui.draw(self.renderer.screen)
         pygame.display.flip()
         self.renderer.tick(FPS)
@@ -201,31 +174,37 @@ class simulation():
         pygame.quit()
         sys.exit()
 
-    # =================
-    # Offline loop
-    # ================= 
+    # ------------------
+    # Offline simulation
+    # ------------------
+
     def run_offline(self):
         if self.controller is None:
-            raise ValueError("Offline mode requires a controller")
-        
+            raise ValueError("Offline mode requires a controller.")
+
+        self.env.reset(x0=self.init_x, theta0=self.init_theta)
+
         t = 0.0
         dt = self.env.dt
 
         while t < SIM_TIME:
-            force = self.controller.get_force(self.env.state, dt)
-            self.env.step(force)
+            self.step_simulation()
             self.plotter.log(self.env.state, t)
             t += dt
+
         self.plotter.plot()
         self.plotter.StatePlotter()
 
-# =================
-# Main init
-# ================= 
+
+# ======================
+# Entry point
+# ======================
+
 if __name__ == "__main__":
-    sim = simulation(mode=MODE)
+    sim = Simulation(mode=MODE)
+
     if MODE == "online":
         sim.run_online()
     else:
-        sim.set_controller("NMPC") # Offline preset
+        sim.set_controller("NMPC")  # Offline preset
         sim.run_offline()
