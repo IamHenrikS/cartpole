@@ -27,7 +27,6 @@ class PIDcontroller:
         l = env.l
         d_theta = env.mu_p
         b_x = env.mu_c
-        dt = env.dt
 
         alpha = 4.0/3.0 - m_pole/m_total
 
@@ -44,11 +43,11 @@ class PIDcontroller:
                             [-(1/(m_total * l * alpha))]
                             ])
         # PID gains
-        self.Kp = 20
+        self.Kp = 30
         self.Kd = 0.1
         
         self.Kp_cart = 0.9
-        self.Kd_cart = 0.1
+        self.Kd_cart = 0.5
 
         self.Ki = 0.0
         self.Ki_cart = 0.0

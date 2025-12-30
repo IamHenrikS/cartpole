@@ -27,7 +27,7 @@ from controller.ModelPredictiveController import ModelPredictiveController
 # Configuration
 # ======================
 
-MODE = "offline"          # "online" or "offline"
+MODE = "online"          # "online" or "offline"
 SIM_TIME = 10.0          # seconds (offline mode)
 FPS = 50                 # frames per second (online mode)
 
@@ -69,7 +69,7 @@ class Simulation:
 
         # Initial conditions (offline mode)
         self.init_x = 0.0
-        self.init_theta = 30.0
+        self.init_theta = 10.0
 
         if self.mode == "online":
             self._init_online_mode()
@@ -227,5 +227,5 @@ if __name__ == "__main__":
     if MODE == "online":
         sim.run_online()
     else:
-        sim.set_controller("LQR")  # Offline preset
+        sim.set_controller("PID")  # Offline preset
         sim.run_offline()

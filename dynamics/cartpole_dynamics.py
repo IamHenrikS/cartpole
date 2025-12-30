@@ -4,6 +4,11 @@ cart pole problem. The following main structure is that the
 numerical integrator, Equations of Motion and state updates.
 
 The following sources has been used: 
+
+The dynamics follow: 
+https://se.mathworks.com/help/symbolic/derive-and-simulate-cart-pole-system.html#DeriveEquationsOfMotionAndSimulateCartPoleSystemExample-2
+
+But the following has been evaluated to understand the problem better:
 Source 1: Cart-Pole Optimal Control
 https://openmdao.github.io/dymos/examples/cart_pole/cart_pole.html
 Source 2: Cart-Pole System: Equations of motion.
@@ -19,8 +24,6 @@ class CartPoleDynamics:
     def __init__(self, dt=0.030):
         """
         Description: Initializes the physical parameters of the cart-pole.
-
-        Source: https://sharpneat.sourceforge.io/research/cart-pole/cart-pole-equations.html
         """
         # Parameters:
         self.g = 9.82
@@ -87,7 +90,7 @@ class CartPoleDynamics:
             """
             Description: Contains the derivative states of the dynamics that is generated
             from the EoM that also accounts for pole-friction and cart-friction. The EoM
-            is generated through Lagrange theory wit non-conservative terms.
+            is generated through Lagrange theory with non-conservative terms.
             """
             _, x_dot, theta, theta_dot = state
             g, m_p, m_t, l, mu_p, mu_c = self.g, self.m_p, self.m_t, self.l, self.mu_p, self.mu_c
