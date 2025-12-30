@@ -9,6 +9,7 @@ This module is responsible for:
 All domain logic (dynamics, control, rendering) lives in separate modules.
 
 # Note: AI cleanup with Clean Code in mind
+# Note 2: LivePlotter has been reduced from this code but could be integrated.
 """
 
 from enum import Enum
@@ -21,7 +22,6 @@ from controller.KeyboardController import KeyboardController
 from controller.PIDcontroller import PIDcontroller
 from controller.LQRcontroller import LQRcontroller
 from controller.ModelPredictiveController import ModelPredictiveController
-
 
 # ======================
 # Configuration
