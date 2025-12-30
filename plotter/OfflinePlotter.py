@@ -1,14 +1,22 @@
 """
-Description: The file utilizes matplotlib for evaluation of the systems
-generated in order to see the values.
+#=============
+OfflinePlotter
+#=============
 
-# Ideas:
-1. I want to loop through all the controllers and paramterize from the linearization.
-2. I want to plot the 4 states: x, x_dot, theta, theta_dot.
-3. Evaluate the time and learning precision.??
-4. Implement noise into the systems and evaluate the stability margins of the cart-pole.
+This module provides tools for offline evaluation and visualization of
+Cart-Pole simulations using matplotlib.
+
+Current functionality:
+- Log full system state over time
+- Plot tracking errors (theta, x)
+- Plot all four system states (x, x_dot, theta, theta_dot)
+
+Planned extensions:
+1. Loop through multiple controllers using linearized models
+2. Compare controller performance across state trajectories
+3. Evaluate convergence time and tracking precision
+4. Inject noise/disturbances and analyze stability margins
 """
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -26,8 +34,9 @@ class OfflinePlotter:
 
     def log(self, state, t):
         """
-        Docstring for log
-        
+        Description: Log the relevant values from the
+        simulation. Stores in the asserted lists.
+
         :param self: self
         :param state: contains the state variables.
         :param t: contians the time stored. 
@@ -41,21 +50,15 @@ class OfflinePlotter:
 
         # Cart error
         x_err = self.x_ref - x
-
+        
+        # Log sim.
         self.theta_err.append(theta_err_deg)
         self.x_err.append(x_err)
         self.t.append(t)
-
         self.states.append(state)
 
 
-    def plot(self):
-        """
-        Docstring for plot
-        
-        # Setting 2 plots with the error of theta from theta_ref
-        and from the x_ref to x 
-        """
+    def plot_error(self):
         fig, (ax_theta, ax_x) = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
         fig.suptitle(self.title)
 
