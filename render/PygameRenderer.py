@@ -13,7 +13,6 @@ positions to be implemented?
 a decision is to refractor the full renderer to easier and more readable code.
 """
 import pygame
-import numpy as np
 import render.constants as C 
 
 from render.Viewport import Viewport

@@ -10,6 +10,7 @@ Current functionality:
 - Log full system state over time
 - Plot tracking errors (theta, x)
 - Plot all four system states (x, x_dot, theta, theta_dot)
+- Log MAE, Max Overshoot, settling time.
 
 Planned extensions:
 1. Loop through multiple controllers using linearized models
@@ -21,7 +22,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class OfflinePlotter:
-    def __init__(self, theta_ref=np.pi, x_ref=0.0, title="CartPole Tracking Errors"):
+    def __init__(self, theta_ref=np.pi, x_ref=0.0, title="Evaluation of CIP"):
         self.theta_ref = theta_ref
         self.x_ref = x_ref
 
@@ -114,3 +115,29 @@ class OfflinePlotter:
 
         plt.tight_layout(rect=[0,0,1,0.96])
         plt.show()
+
+    # -- Metrics -- #
+    def mean_absolute_error(self):
+        return {
+            "x_mae": np.mean(np.abs(self.x_err)),
+            "theta_mae_deg": np.mean(np.abs(self.theta_err)),
+        }
+
+    def max_overshoot(self):
+        x_vals = np.array(self.states)[:, 0]
+        return np.max(np.abs(x_vals - self.x_ref))
+
+    def settling_time(self, tol_x=0.02, tol_theta_deg=2.0):
+        for i in range(len(self.t)):
+            if (
+                abs(self.x_err[i]) < tol_x and
+                abs(self.theta_err[i]) < tol_theta_deg
+            ):
+                # Check it stays settled
+                if all(
+                    abs(self.x_err[j]) < tol_x and
+                    abs(self.theta_err[j]) < tol_theta_deg
+                    for j in range(i, len(self.t))
+                ):
+                    return self.t[i]
+        return np.nan

@@ -217,7 +217,6 @@ class Simulation:
 
         self.plotter.StatePlotter()
 
-
 # ======================
 # Entry point
 # ======================
